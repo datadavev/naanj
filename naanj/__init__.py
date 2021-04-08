@@ -9,13 +9,23 @@ import json
 import datetime
 import dateparser
 import asyncio
+import concurrent.futures
+import ssl
+import certifi
 import aiohttp
 import naanj.anvl
 
 AUTHORITY_SOURCE = "https://n2t.net/e/pub/naan_registry.txt"
 STATUS_THREADS = 20
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_0) Python/3.9 naanj/0.1"
 
 _L = logging.getLogger("naanj")
+urllib3_log = logging.getLogger("urllib3")
+urllib3_log.setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").propagate = False
+requests_log = logging.getLogger("requests")
+requests_log.addHandler(logging.NullHandler())
+requests_log.propagate = False
 
 JSON_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 """datetime format string for generating JSON content
@@ -111,7 +121,7 @@ class Naans(object):
             "where": {
                 "url": self._asUrl(block["where"]),
                 "status": None,
-                "timestamp": None,
+                "checked": None,
                 "msg": None,
             },
             "how": how,
@@ -125,18 +135,20 @@ class Naans(object):
     def __iter__(self):
         return enumerate(self.naa)
 
-
     def asJson(self):
-        return json.dumps({"erc":self.header,"naa":self.naa}, indent=2, default=_jsonConverter)
+        return json.dumps(
+            {"erc": self.header, "naa": self.naa}, indent=2, default=_jsonConverter
+        )
 
     def checkSources(self):
         async def checkStatus(idx, url, session):
+            sslcontext = ssl.create_default_context(cafile=certifi.where())
+            headers = {"User-Agent": USER_AGENT}
             try:
                 async with session.get(
                     url,
-                    timeout=aiohttp.ClientTimeout(
-                        total=10, sock_connect=5, sock_read=5
-                    ),
+                    ssl=False,
+                    headers=headers,
                 ) as response:
                     status = response.status
                     _L.debug("%s: %s", status, response.url)
@@ -145,11 +157,14 @@ class Naans(object):
             except Exception as e:
                 _L.error(e)
                 tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
-                return idx, 0, tstamp, str(e)
+                return (idx, 0, tstamp, str(e))
 
         async def run(urls):
             tasks = []
-            async with aiohttp.ClientSession() as session:
+            connector = aiohttp.TCPConnector(limit=25)
+            timeout = aiohttp.ClientTimeout(total=300)
+
+            async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
                 i = 0
                 for url in urls:
                     task = asyncio.ensure_future(checkStatus(i, url, session))
@@ -163,26 +178,55 @@ class Naans(object):
         for entry in self.naa:
             urls.append(entry["where"]["url"])
         loop = asyncio.get_event_loop()
-        asyncio.set_event_loop(loop)
+        #asyncio.set_event_loop(loop)
         task = asyncio.ensure_future(run(urls))
         loop.run_until_complete(task)
         for result in task.result().result():
-            upd = {
-                "status": result[1],
-                "timestamp": result[2],
-                "msg": result[3]
-            }
+            upd = {"status": result[1], "timestamp": result[2], "msg": result[3]}
             idx = result[0]
             self.naa[idx]["where"].update(upd)
 
+
+    def checkSourcesR(self):
+
+        def checkStatus(idx, session, url):
+            tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
+            try:
+                response = session.get(url, timeout=10)
+                _L.debug("%s: %s", response.status_code, response.url)
+                return (idx, response.status_code, tstamp, None)
+            except Exception as e:
+                _L.error(e)
+                return (idx, 0, tstamp, str(e))
+
+        async def checkStatuses():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
+                with requests.Session() as session:
+                    loop = asyncio.get_event_loop()
+                    tasks = []
+                    idx = 0
+                    for naa in self.naa:
+                        tasks.append(
+                            loop.run_in_executor(executor, checkStatus, *(idx, session, naa['where']['url']))
+                        )
+                        idx += 1
+                    for result in await asyncio.gather(*tasks):
+                        upd = {"status": result[1], "checked": result[2], "msg": result[3]}
+                        idx = result[0]
+                        self.naa[idx]['where'].update(upd)
+
+        loop = asyncio.get_event_loop()
+        future = asyncio.ensure_future(checkStatuses())
+        loop.run_until_complete(future)
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
     naans = Naans()
     naans.load()
     print(naans)
-    naans.checkSources()
-    print(naans.asJson())
+    naans.checkSourcesR()
+    for n in naans.naa:
+        print(json.dumps(n, indent=2, default=_jsonConverter))
 
 
 if __name__ == "__main__":
