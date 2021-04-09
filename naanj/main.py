@@ -6,6 +6,20 @@ import click
 import curses
 import logging
 import naanj
+import threading
+
+# used for progress display
+log_lock = threading.Lock()
+
+LOG_LEVELS = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "WARN": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "FATAL": logging.CRITICAL,
+    "CRITICAL": logging.CRITICAL,
+}
 
 def getLogFormatter():
     return logging.Formatter(
@@ -30,14 +44,13 @@ class CursesHandler(logging.Handler):
             self.handleError(record)
 
 
-def setupLogWin(scr, logger):
+def setupLogWin(scr, logger, begin_y=0):
     formatterDisplay = getLogFormatter()
     maxy, maxx = scr.getmaxyx()
     tlx = 2
-    tly = 0
     height = 10
     width = maxx - 4
-    logwin = curses.newwin(height, width, tly, tlx)
+    logwin = curses.newwin(height, width, begin_y, tlx)
     logwin.refresh()
     logwin.scrollok(True)
     logwin.idlok(True)
@@ -59,17 +72,18 @@ def idx2yx(i):
 
 def displayCallback(idx, state):
     global status_win
-    chars = ["▒", "▓", "✔", "X"]
-    attrs = [
-        curses.color_pair(1),
-        curses.color_pair(2),
-        curses.color_pair(0),
-        curses.color_pair(4),
-    ]
-    y, x = idx2yx(idx)
-    c = chars[state]
-    status_win["win"].addch(y, x, c, attrs[state])
-    status_win["win"].refresh()
+    with log_lock:
+        chars = ["▒", "▓", "✔", "X"]
+        attrs = [
+            curses.color_pair(1),
+            curses.color_pair(2),
+            curses.color_pair(3),
+            curses.color_pair(4),
+        ]
+        y, x = idx2yx(idx)
+        c = chars[state]
+        status_win["win"].addch(y, x, c, attrs[state])
+        status_win["win"].refresh()
 
 
 def main2(stdscr, logger, naans):
@@ -80,20 +94,22 @@ def main2(stdscr, logger, naans):
     curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
     stdscr.clear()
     stdscr.refresh()
-    setupLogWin(stdscr, logger)
+    setupLogWin(stdscr, logger, begin_y=11)
 
     global status_win
     maxy, maxx = stdscr.getmaxyx()
     begin_x = 2
-    begin_y = 12
+    begin_y = 0
     width = maxx - 4
-    if width > 50:
-        width = 50
+    if width > 76:
+        width = 76
     height = int(len(naans.naa) / width) + 1
     status_win["height"] = height
     status_win["width"] = width
     status_win["win"] = curses.newwin(height, width, begin_y, begin_x)
 
+    #Pause just a bit for screen prep
+    stdscr.timeout(100)
     naans.checkSources(callback=displayCallback)
     logger.info("COMPLETE. Press a key or wait a bit to continue...")
     stdscr.timeout(5000)
@@ -113,10 +129,13 @@ def main2(stdscr, logger, naans):
     "-p", "--progress", is_flag=True, help="Show progress when testing (implies -t)"
 )
 @click.option("-t", "--test", is_flag=True, help="Test URLs listed as location")
+@click.option(
+    "--verbosity", default="INFO", help="Specify logging level", show_default=True
+)
 @click.argument("destination", required=False)
-def main(naans_source, progress, test, destination=None):
+def main(naans_source, progress, test, verbosity, destination=None):
     logger = logging.getLogger("naanj")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(LOG_LEVELS.get(verbosity.upper(), logging.INFO))
     c_handler = logging.StreamHandler()
     c_handler.setFormatter(getLogFormatter())
     naans = naanj.Naans()

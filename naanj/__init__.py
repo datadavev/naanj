@@ -138,7 +138,6 @@ class Naans(object):
         )
 
     def checkSources(self, callback=None):
-
         def checkStatus(idx, session, url, cb=None):
             tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
             try:
@@ -147,7 +146,7 @@ class Naans(object):
                 response = session.get(url, timeout=10)
                 if not cb is None:
                     cb(idx, 2)
-                _L.debug("%s: %s", response.status_code, response.url)
+                #_L.debug("%s: %s", response.status_code, response.url)
                 return (idx, response.status_code, tstamp, None)
             except Exception as e:
                 _L.warning(e)
@@ -165,20 +164,30 @@ class Naans(object):
                         if not cb is None:
                             cb(idx, 0)
                         tasks.append(
-                            loop.run_in_executor(executor, checkStatus, *(idx, session, naa['where']['url'], cb))
+                            loop.run_in_executor(
+                                executor,
+                                checkStatus,
+                                *(idx, session, naa["where"]["url"], cb),
+                            )
                         )
                         idx += 1
                     for result in await asyncio.gather(*tasks):
-                        upd = {"status": result[1], "checked": result[2], "msg": result[3]}
+                        upd = {
+                            "status": result[1],
+                            "checked": result[2],
+                            "msg": result[3],
+                        }
                         idx = result[0]
-                        self.naa[idx]['where'].update(upd)
+                        self.naa[idx]["where"].update(upd)
 
         loop = asyncio.get_event_loop()
         future = asyncio.ensure_future(checkStatuses(cb=callback))
         loop.run_until_complete(future)
 
+
 def testCallback(idx, state):
     print(f"{idx}: {state}")
+
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
@@ -188,6 +197,7 @@ def main():
     naans.checkSources(callback=testCallback)
     for n in naans.naa:
         print(json.dumps(n, indent=2, default=_jsonConverter))
+
 
 if __name__ == "__main__":
     sys.exit(main())
