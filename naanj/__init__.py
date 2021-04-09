@@ -10,9 +10,6 @@ import datetime
 import dateparser
 import asyncio
 import concurrent.futures
-import ssl
-import certifi
-import aiohttp
 import naanj.anvl
 
 AUTHORITY_SOURCE = "https://n2t.net/e/pub/naan_registry.txt"
@@ -140,74 +137,35 @@ class Naans(object):
             {"erc": self.header, "naa": self.naa}, indent=2, default=_jsonConverter
         )
 
-    def checkSources(self):
-        async def checkStatus(idx, url, session):
-            sslcontext = ssl.create_default_context(cafile=certifi.where())
-            headers = {"User-Agent": USER_AGENT}
-            try:
-                async with session.get(
-                    url,
-                    ssl=False,
-                    headers=headers,
-                ) as response:
-                    status = response.status
-                    _L.debug("%s: %s", status, response.url)
-                    tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
-                    return (idx, status, tstamp, None)
-            except Exception as e:
-                _L.error(e)
-                tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
-                return (idx, 0, tstamp, str(e))
+    def checkSources(self, callback=None):
 
-        async def run(urls):
-            tasks = []
-            connector = aiohttp.TCPConnector(limit=25)
-            timeout = aiohttp.ClientTimeout(total=300)
-
-            async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-                i = 0
-                for url in urls:
-                    task = asyncio.ensure_future(checkStatus(i, url, session))
-                    i += 1
-                    tasks.append(task)
-                responses = asyncio.gather(*tasks)
-                await responses
-            return responses
-
-        urls = []
-        for entry in self.naa:
-            urls.append(entry["where"]["url"])
-        loop = asyncio.get_event_loop()
-        #asyncio.set_event_loop(loop)
-        task = asyncio.ensure_future(run(urls))
-        loop.run_until_complete(task)
-        for result in task.result().result():
-            upd = {"status": result[1], "timestamp": result[2], "msg": result[3]}
-            idx = result[0]
-            self.naa[idx]["where"].update(upd)
-
-
-    def checkSourcesR(self):
-
-        def checkStatus(idx, session, url):
+        def checkStatus(idx, session, url, cb=None):
             tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
             try:
+                if not cb is None:
+                    cb(idx, 1)
                 response = session.get(url, timeout=10)
+                if not cb is None:
+                    cb(idx, 2)
                 _L.debug("%s: %s", response.status_code, response.url)
                 return (idx, response.status_code, tstamp, None)
             except Exception as e:
-                _L.error(e)
+                _L.warning(e)
+                if not cb is None:
+                    cb(idx, 3)
                 return (idx, 0, tstamp, str(e))
 
-        async def checkStatuses():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
+        async def checkStatuses(cb=None):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
                 with requests.Session() as session:
                     loop = asyncio.get_event_loop()
                     tasks = []
                     idx = 0
                     for naa in self.naa:
+                        if not cb is None:
+                            cb(idx, 0)
                         tasks.append(
-                            loop.run_in_executor(executor, checkStatus, *(idx, session, naa['where']['url']))
+                            loop.run_in_executor(executor, checkStatus, *(idx, session, naa['where']['url'], cb))
                         )
                         idx += 1
                     for result in await asyncio.gather(*tasks):
@@ -216,18 +174,20 @@ class Naans(object):
                         self.naa[idx]['where'].update(upd)
 
         loop = asyncio.get_event_loop()
-        future = asyncio.ensure_future(checkStatuses())
+        future = asyncio.ensure_future(checkStatuses(cb=callback))
         loop.run_until_complete(future)
+
+def testCallback(idx, state):
+    print(f"{idx}: {state}")
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
     naans = Naans()
     naans.load()
     print(naans)
-    naans.checkSourcesR()
+    naans.checkSources(callback=testCallback)
     for n in naans.naa:
         print(json.dumps(n, indent=2, default=_jsonConverter))
-
 
 if __name__ == "__main__":
     sys.exit(main())
