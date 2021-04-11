@@ -86,12 +86,13 @@ def displayCallback(idx, state):
         status_win["win"].refresh()
 
 
-def main2(stdscr, logger, naans):
+def statusProgress(stdscr, logger, naans):
     curses.start_color()
     curses.init_pair(1, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+    stdscr.bkgd(' ', curses.color_pair(0) | curses.A_BOLD)
     stdscr.clear()
     stdscr.refresh()
     setupLogWin(stdscr, logger, begin_y=11)
@@ -143,7 +144,7 @@ def main(naans_source, progress, test, verbosity, destination=None):
     if progress:
         if sys.stdout.isatty():
             test = False
-            naans = curses.wrapper(main2, logger, naans)
+            naans = curses.wrapper(statusProgress, logger, naans)
         else:
             logger.addHandler(c_handler)
             logger.warning("Progress requested but not on a TTY")

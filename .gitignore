@@ -1,5 +1,8 @@
-.DS_Store
 .idea/
+
+**/.DS_Store
+web/node_modules/
+web/dist/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

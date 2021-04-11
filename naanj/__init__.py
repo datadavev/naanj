@@ -138,16 +138,28 @@ class Naans(object):
         )
 
     def checkSources(self, callback=None):
-        def checkStatus(idx, session, url, cb=None):
+        def checkStatus(idx, session, url, cb=None, verify=True):
             tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
             try:
+                msg = None
+                if not verify:
+                    msg = "No certification validation"
                 if not cb is None:
                     cb(idx, 1)
-                response = session.get(url, timeout=10)
+                response = session.get(url, timeout=10, verify=verify)
                 if not cb is None:
                     cb(idx, 2)
                 #_L.debug("%s: %s", response.status_code, response.url)
-                return (idx, response.status_code, tstamp, None)
+                return (idx, response.status_code, tstamp, response.reason)
+            except requests.exceptions.SSLError as e:
+                if verify:
+                    _L.warning("Retrying %s with no certification validation")
+                    return checkStatus(idx, session, url, cb=cb, verify=False)
+                else:
+                    _L.warning(e)
+                    if not cb is None:
+                        cb(idx, 3)
+                    return (idx, -1, tstamp, str(e))
             except Exception as e:
                 _L.warning(e)
                 if not cb is None:
