@@ -2,7 +2,7 @@
 
 Reflection of NAAN registry, in json.
 
-![Screen shot animation](https://player.vimeo.com/video/535579544?title=0&amp;byline=0&amp;portrait=0&amp;speed=0&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=56727")
+[![Screen shot animation](https://i.imgur.com/O1lQFFV.gif)](https://vimeo.com/535589766)
 
 `Naanj` is a python script that generates a [JSON translation](data/naanj.json)
 of the NAAN authority [public ANVL source](https://n2t.net/e/pub/naan_registry.txt) and 
