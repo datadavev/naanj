@@ -4,7 +4,6 @@ on:
   
 jobs:
   build_deploy_ui:
-    build-and-deploy-book:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
