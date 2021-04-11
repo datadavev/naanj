@@ -25,4 +25,7 @@ jobs:
     - name: Update NAANJ
       run: |
         mkdir -p data; poetry run naanj -t data/naanj.json
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: Update naanj.json
    
