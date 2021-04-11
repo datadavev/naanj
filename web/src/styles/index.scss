@@ -5,5 +5,8 @@
 
 @import 'variables';
 @import 'scaffolding';
-@import '~tabulator-tables/dist/css/tabulator_simple';
+
+$textSize: 12px;
+$headerMargin: 1px;
+@import '~tabulator-tables/src/scss/tabulator';
 

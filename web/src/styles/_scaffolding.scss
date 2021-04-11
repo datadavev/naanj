@@ -22,7 +22,13 @@ body {
 }
 
 h1 {
-  margin: auto;
-  text-align: center;
+  //margin: auto;
+  text-align: left;
   max-width: 90vw;
+  font-size: 120%;
+}
+
+h2 {
+  font-size: 110%;
+  font-weight: normal;
 }

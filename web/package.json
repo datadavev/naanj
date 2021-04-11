@@ -1,5 +1,5 @@
 {
-  "name": "webpack-boilerplate",
+  "name": "NAANj",
   "version": "2.0.1",
   "description": "Sensible webpack 5 boilerplate using Babel and PostCSS with a hot dev server and an optimized production build.",
   "main": "index.js",
@@ -51,6 +51,8 @@
     "url": "git@github.com:taniarascia/webpack-boilerplate"
   },
   "dependencies": {
+    "alpine-magic-helpers": "^1.1.0",
+    "alpinejs": "^2.8.2",
     "moment": "^2.29.1",
     "tabulator-tables": "^4.9.3"
   }

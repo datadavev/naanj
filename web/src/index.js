@@ -1,7 +1,9 @@
 import moment from 'moment';
-import { loadNaans } from '@/js/load_data'
-
 window.moment = moment
+
+import 'alpine-magic-helpers'
+import 'alpinejs';
+import { loadNaans } from '@/js/load_data'
 
 // Test import of an asset
 // import webpackLogo from '@/images/webpack-logo.svg'
@@ -18,7 +20,7 @@ Tabulator.prototype.extendModule("keybindings", "bindings", {
 
 // create Tabulator on DOM element with id "example-table"
 let table = new Tabulator('#example-table', {
-  height: '50%', // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
+  height: '600px', // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
   data: [], // assign data to table
   layout: 'fitColumnsStretch', // fit columns to width of table (optional)
   //columnMaxWidth: 300,
@@ -29,13 +31,15 @@ let table = new Tabulator('#example-table', {
   columns: [
     // Define Table Columns
     { title: 'ID', field: 'abbrev', frozen: true, headerFilter:"input",
-      headerTooltip:"Organization name acronym"
+      headerTooltip:"Organization name acronym",
+      responsive: 0
     },
     { title: 'What', field: 'what', frozen: true, headerFilter:"input",
       headerTooltip: "NAAN"
     },
     { title: 'Who', field: 'who', headerFilter:"input", tooltip:true,
-      headerTooltip: "Organization name"
+      headerTooltip: "Organization name",
+
     },
     {
       title: 'When',
@@ -55,7 +59,7 @@ let table = new Tabulator('#example-table', {
       }
     },
     { title: 'Status', field: 'status', headerFilter:true},
-    { title: 'Msg', field: 'msg' }
+    { title: 'Msg', field: 'msg', formatter:'plaintext' }
   ],
   rowClick: function (e, row) {
     // trigger an alert message when the row is clicked

@@ -34,10 +34,11 @@ class CursesHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            screen = self.screen
-            fs = "\n%s"
-            screen.addstr(fs % msg)
-            screen.refresh()
+            with log_lock:
+                screen = self.screen
+                fs = "\n%s"
+                screen.addstr(fs % msg)
+                screen.refresh()
         except (KeyboardInterrupt, SystemExit):
             raise
         except:

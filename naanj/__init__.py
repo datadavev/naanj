@@ -28,6 +28,11 @@ JSON_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 """datetime format string for generating JSON content
 """
 
+def dtnow():
+    """
+    Get datetime for now in UTC timezone.
+    """
+    return datetime.datetime.now(datetime.timezone.utc)
 
 def datetimeToJsonStr(dt):
     if dt is None:
@@ -46,10 +51,16 @@ def _jsonConverter(o):
 
 class Naans(object):
     def __init__(self):
-        self.header = {}
+        self.header = {
+            "authority_source": "",
+            "tstamp": "",
+            "num_entries": 0,
+        }
         self.naa = []
 
     def load(self, src=AUTHORITY_SOURCE):
+        self.header["authority_source"] = src
+        self.header["tstamp"] = dtnow()
         response = requests.get(src, timeout=5)
         if not response.status_code == 200:
             raise ValueError(f"Authority returned status code: {response.status_code}")
@@ -63,7 +74,7 @@ class Naans(object):
                 _L.warning("Unprocessed block: %s", k0)
 
     def addHeader(self, block):
-        self.header = block
+        self.header.update(block)
         self.header["when"] = dateparser.parse(
             block["when"],
             settings={
@@ -71,7 +82,6 @@ class Naans(object):
                 "TIMEZONE": "UTC",
             },
         )
-        self.header["num_entries"] = 0
 
     def _splitEq(self, e):
         parts = re.split(r"\(=\)", e)
@@ -141,19 +151,22 @@ class Naans(object):
         def checkStatus(idx, session, url, cb=None, verify=True):
             tstamp = datetime.datetime.now().astimezone(datetime.timezone.utc)
             try:
-                msg = None
-                if not verify:
-                    msg = "No certification validation"
                 if not cb is None:
                     cb(idx, 1)
                 response = session.get(url, timeout=10, verify=verify)
                 if not cb is None:
                     cb(idx, 2)
                 #_L.debug("%s: %s", response.status_code, response.url)
-                return (idx, response.status_code, tstamp, response.reason)
+                #msg = response.reason
+                msg = ""
+                if response.status_code != 200:
+                    msg = response.reason
+                elif not verify:
+                    msg = "No certificate validation"
+                return (idx, response.status_code, tstamp, msg)
             except requests.exceptions.SSLError as e:
                 if verify:
-                    _L.warning("Retrying %s with no certification validation")
+                    _L.warning("Retrying %s with no certification validation", url)
                     return checkStatus(idx, session, url, cb=cb, verify=False)
                 else:
                     _L.warning(e)
@@ -167,10 +180,10 @@ class Naans(object):
                 return (idx, 0, tstamp, str(e))
 
         async def checkStatuses(cb=None):
+            tasks = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
                 with requests.Session() as session:
                     loop = asyncio.get_event_loop()
-                    tasks = []
                     idx = 0
                     for naa in self.naa:
                         if not cb is None:
@@ -183,15 +196,16 @@ class Naans(object):
                             )
                         )
                         idx += 1
-                    for result in await asyncio.gather(*tasks):
-                        upd = {
-                            "status": result[1],
-                            "checked": result[2],
-                            "msg": result[3],
-                        }
-                        idx = result[0]
-                        self.naa[idx]["where"].update(upd)
+            for result in await asyncio.gather(*tasks):
+                upd = {
+                    "status": result[1],
+                    "checked": result[2],
+                    "msg": result[3],
+                }
+                idx = result[0]
+                self.naa[idx]["where"].update(upd)
 
+        requests.packages.urllib3.disable_warnings()
         loop = asyncio.get_event_loop()
         future = asyncio.ensure_future(checkStatuses(cb=callback))
         loop.run_until_complete(future)
