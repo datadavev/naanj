@@ -1,6 +1,6 @@
 //import moment from 'moment';
 export let NAANS = [];
-const NAANS_SOURCE = "/assets/naanj.json";
+const NAANS_SOURCE = "https://raw.githubusercontent.com/datadavev/naanj/main/data/naanj.json";
 
 function processNaanList(data) {
     let meta = data.erc
