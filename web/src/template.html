@@ -10,7 +10,7 @@
   <body>
     <div x-data="{meta: {}}" x-on:naans-load.window="meta = $event.detail.meta">
       <h1 x-text="meta.what" ></h1>
-      <h2 x-text="meta.who" ></h2>
+      <h2>View of the public NAAN registry operated by <span x-text="meta.who" ></span></h2>
       <p>The authority, <a x-text="meta.authority_source" x-bind:href="meta.authority_source"></a>, was
         updated on <span x-text="meta.when"></span>. The <a x-bind:href="meta.naanj_source">source</a> for
         this page was generated at <span x-text="meta.tstamp"></span>. A suucessful connection was made to
