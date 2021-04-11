@@ -13,7 +13,7 @@ import concurrent.futures
 import naanj.anvl
 
 AUTHORITY_SOURCE = "https://n2t.net/e/pub/naan_registry.txt"
-STATUS_THREADS = 20
+STATUS_THREADS = 30
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_0) Python/3.9 naanj/0.1"
 
 _L = logging.getLogger("naanj")
@@ -181,7 +181,7 @@ class Naans(object):
 
         async def checkStatuses(cb=None):
             tasks = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=STATUS_THREADS) as executor:
                 with requests.Session() as session:
                     loop = asyncio.get_event_loop()
                     idx = 0
