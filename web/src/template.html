@@ -19,9 +19,6 @@
           <span x-text="meta.num_entries - meta.num_errors"></span> locations of the
           <span x-text="meta.num_entries"></span> registered.</p>
       </div>
-    </div>
-    <div id="example-table"></div>
-    <div class="content">
       <h2>Summary of HTTP connection status</h2>
       <div x-data="{astats: []}" x-on:naans-load.window="astats = $event.detail.astats">
         <table>
@@ -39,8 +36,9 @@
           </thead>
         </table>
       </div>
-      <p>Connection status is determined using a Python client and the requests library. A status other that 200
+      <p>Connection status is determined using a Python client and the requests library. A status other than 200
       indicates the client encountered an issue when trying to connect to the url.</p>
     </div>
+    <div id="example-table"></div>
   </body>
 </html>
