@@ -32,3 +32,20 @@ h2 {
   font-size: 110%;
   font-weight: normal;
 }
+
+div.content {
+  margin-left:20px;
+  width: 800px;
+}
+
+table {
+  border-collapse: collapse;
+}
+th {
+  border-top: 1px solid gray;
+  border-bottom: 1px solid gray;
+}
+
+tr:last-child {
+  border-bottom: 1px solid gray;
+}

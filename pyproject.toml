@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "naanj"
-version = "0.3.1"
+version = "0.3.2"
 description = "Translating NAAN registry to JSON"
 authors = ["datadavev <605409+datadavev@users.noreply.github.com>"]
 license = "Apache 2.0"
