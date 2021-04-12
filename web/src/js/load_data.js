@@ -11,6 +11,7 @@ const stat_messages = {
     '403': "Forbidden",
     '404': "Not Found",
     '406': "Not Acceptable",
+    '429': "Too many requests",
     '500': "Internal Server Error",
     '502': "Bad Gateway",
     '503': "Service Unavailable",
