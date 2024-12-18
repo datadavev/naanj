@@ -2,8 +2,8 @@ name: update_naans
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '5 5 * * *' #Every day at 05:05
+  #schedule:
+  #  - cron: '5 5 * * *' #Every day at 05:05
   
 jobs:
   update-naanj:
